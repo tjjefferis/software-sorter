@@ -3,83 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>macOS Software Categorisation</title>
+<title>GCSE ICT: Software Categorisation</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, #102619 0%, #00331D 50%, #1a1a16 100%);
+    background: radial-gradient(circle at 50% 20%, #004d2c 0%, #002b18 55%, #00170d 100%);
     overflow: hidden;
     color: #fff;
+    -webkit-font-smoothing: antialiased;
   }
+
+  /* macOS Top Bar */
   header {
-    height: 40px;
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    height: 42px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 13.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    z-index: 10;
   }
-  .menu-left { display: flex; gap: 16px; align-items: center; font-weight: 600; }
-  .apple-logo { font-size: 17px; }
-  .menu-right { display: flex; gap: 10px; }
+  .menu-left { display: flex; gap: 14px; align-items: center; font-weight: 600; }
+  .apple-logo { font-size: 16px; margin-right: 2px; }
+  .menu-right { display: flex; gap: 10px; align-items: center; }
+
   .btn {
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.16);
     border: 1px solid rgba(255, 255, 255, 0.28);
     color: #fff;
-    padding: 5px 14px;
+    padding: 6px 14px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
-    transition: 0.15s;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-  .btn:hover { background: rgba(255, 255, 255, 0.32); }
-  .btn-check { background: #007a3d; border-color: #00a854; }
-  .btn-check:hover { background: #00994c; }
-  .btn-add { background: #e74011; border-color: #ff6438; }
-  .btn-add:hover { background: #ff5221; }
+  .btn:hover { background: rgba(255, 255, 255, 0.28); }
+  .btn-check { background: #007a3d; border-color: #00b050; }
+  .btn-check:hover { background: #009944; }
+  .btn-add { background: #e04816; border-color: #ff6b3d; }
+  .btn-add:hover { background: #ff5722; }
 
+  /* 3 Classification Zones */
   .zones-container {
     flex: 1;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 16px;
-    padding: 16px 20px;
+    padding: 14px 18px;
+    min-height: 0;
   }
   .zone {
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-radius: 14px;
-    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border: 2px dashed rgba(255, 255, 255, 0.22);
     display: flex;
     flex-direction: column;
     padding: 14px;
     transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
   }
   .zone.drag-over {
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.12);
     border-color: #fcc978;
-    transform: scale(1.006);
+    transform: scale(1.004);
   }
   .zone-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     padding-bottom: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
-  .zone-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .zone-title { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
   .pill-sys { color: #5ce69a; }
   .pill-app { color: #fcc978; }
   .pill-util { color: #76c5ff; }
-  .zone-desc { font-size: 13px; color: rgba(255, 255, 255, 0.75); margin-top: 4px; }
+  .zone-desc { font-size: 12.5px; color: rgba(255, 255, 255, 0.8); margin-top: 4px; }
+  .zone-desc strong { color: #fff; }
 
   .drop-area {
     flex: 1;
@@ -88,86 +101,133 @@
     align-content: flex-start;
     gap: 10px;
     overflow-y: auto;
-    min-height: 120px;
+    padding-right: 4px;
   }
 
+  /* Draggable Item Card */
   .item-card {
     background: #ffffff;
-    color: #111;
-    padding: 8px 14px;
+    color: #111827;
+    padding: 6px 12px 6px 8px;
     border-radius: 10px;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: grab;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    transition: transform 0.15s, box-shadow 0.15s, outline 0.15s;
-    height: 44px;
-    border: 1px solid #d4ded9;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    transition: transform 0.15s, box-shadow 0.15s, outline 0.15s, background 0.15s;
+    height: 48px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
   }
-  .item-card:active { cursor: grabbing; transform: scale(1.05); }
-  .item-card .icon-img { font-size: 20px; }
-  .item-card.correct { outline: 3px solid #28a745; background: #e8f5e9; }
-  .item-card.wrong { outline: 3px solid #dc3545; background: #ffebee; }
+  .item-card:active { cursor: grabbing; transform: scale(1.04); }
+  .item-icon-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 6px;
+    display: block;
+    flex-shrink: 0;
+  }
+  .item-card.correct {
+    outline: 3px solid #28a745;
+    background: #e8f5e9;
+    color: #0b4519;
+  }
+  .item-card.wrong {
+    outline: 3px solid #dc3545;
+    background: #ffebee;
+    color: #630c14;
+  }
 
+  /* Dock Shelf */
   .dock-container {
-    padding: 10px 0 16px;
+    padding: 8px 0 16px;
     display: flex;
     justify-content: center;
+    align-items: center;
   }
   .dock {
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
     padding: 8px 16px;
     display: flex;
     gap: 10px;
     align-items: center;
-    min-height: 60px;
-    max-width: 95vw;
+    min-height: 64px;
+    max-width: 96vw;
     overflow-x: auto;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
   }
   .dock.drag-over {
     background: rgba(255, 255, 255, 0.28);
     border-color: #fcc978;
   }
 
+  /* Modal for Adding Custom Icons */
   .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 100;
     justify-content: center;
     align-items: center;
   }
   .modal-box {
-    background: #1f2a24;
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 12px;
+    background: #192720;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 14px;
     padding: 24px;
-    width: 380px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    width: 440px;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.6);
   }
-  .modal-box h3 { margin-bottom: 16px; font-size: 18px; color: #fff; }
+  .modal-box h3 { margin-bottom: 14px; font-size: 19px; color: #fff; font-weight: 800; }
   .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-  .form-group label { font-size: 12px; color: rgba(255,255,255,0.7); }
+  .form-group label { font-size: 12.5px; color: rgba(255,255,255,0.8); font-weight: 600; }
   .form-group input, .form-group select {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.25);
     color: #fff;
-    padding: 8px 10px;
-    border-radius: 6px;
+    padding: 9px 12px;
+    border-radius: 8px;
     font-size: 14px;
     outline: none;
   }
-  .form-group select option { background: #1f2a24; color: #fff; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .form-group select option { background: #192720; color: #fff; }
+
+  /* Direct Paste Dropzone */
+  .paste-zone {
+    border: 2px dashed rgba(252, 201, 120, 0.6);
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    min-height: 90px;
+    text-align: center;
+    transition: background 0.15s;
+  }
+  .paste-zone:hover { background: rgba(255, 255, 255, 0.06); }
+  .paste-preview {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 6px;
+    display: none;
+    margin-bottom: 6px;
+  }
+  .paste-hint { font-size: 11.5px; color: #fcc978; line-height: 1.4; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 </style>
 </head>
 <body>
@@ -214,22 +274,27 @@
   <div class="dock" id="dock" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)" data-category="dock"></div>
 </div>
 
+<!-- Add Icon Modal with Clipboard & File Paste -->
 <div class="modal-overlay" id="modal">
   <div class="modal-box">
     <h3>Add Custom Software Icon</h3>
     <div class="form-group">
       <label>Software Name:</label>
-      <input type="text" id="custom-name" placeholder="e.g. Roblox, Device Driver, Firewall">
+      <input type="text" id="custom-name" placeholder="e.g. Microsoft PowerPoint, Teams, Roblox">
     </div>
     <div class="form-group">
-      <label>Icon / Emoji:</label>
-      <input type="text" id="custom-emoji" value="💻" maxlength="4">
+      <label>Icon Image (Paste from clipboard Cmd+V or Click to browse):</label>
+      <div class="paste-zone" id="paste-zone" tabindex="0" onclick="document.getElementById('custom-file').click()">
+        <img id="paste-preview" class="paste-preview" alt="Preview">
+        <span class="paste-hint" id="paste-hint">📋 <strong>Click &amp; Paste (Cmd+V)</strong> any image here<br>or click to upload a file</span>
+      </div>
+      <input type="file" id="custom-file" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
     </div>
     <div class="form-group">
       <label>Correct Category:</label>
       <select id="custom-category">
         <option value="system">System Software</option>
-        <option value="application">Application Software</option>
+        <option value="application" selected>Application Software</option>
         <option value="utility">Utility Software</option>
       </select>
     </div>
@@ -241,30 +306,33 @@
 </div>
 
 <script>
+// High-resolution SVG / WebP icons for authentic application recognition
 const defaultItems = [
-  { id: '1', name: 'macOS Finder', type: 'system', icon: '💻' },
-  { id: '2', name: 'System Settings', type: 'system', icon: '⚙️' },
-  { id: '3', name: 'Terminal (CLI)', type: 'system', icon: '⌨️' },
-  { id: '4', name: 'Printer Drivers', type: 'system', icon: '🖨️' },
-  { id: '5', name: 'Google Chrome', type: 'application', icon: '🌐' },
-  { id: '6', name: 'Microsoft Word', type: 'application', icon: '📝' },
-  { id: '7', name: 'Spotify Music', type: 'application', icon: '🎵' },
-  { id: '8', name: 'Fortnite', type: 'application', icon: '🎮' },
-  { id: '9', name: 'Photoshop', type: 'application', icon: '🎨' },
-  { id: '10', name: 'Disk First Aid', type: 'utility', icon: '💽' },
-  { id: '11', name: 'Antivirus Guard', type: 'utility', icon: '🛡️' },
-  { id: '12', name: 'Time Machine Backup', type: 'utility', icon: '⏳' },
-  { id: '13', name: 'Disk Defragmenter', type: 'utility', icon: '🧩' },
-  { id: '14', name: 'Zip Compression', type: 'utility', icon: '🗜️' }
+  { id: '1', name: 'macOS Finder', type: 'system', icon: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Finder_Icon_macOS_Big_Sur.png' },
+  { id: '2', name: 'System Settings', type: 'system', icon: 'https://upload.wikimedia.org/wikipedia/commons/6/67/System_Settings_macOS_Ventura.png' },
+  { id: '3', name: 'Terminal (CLI)', type: 'system', icon: 'https://cdn-icons-png.flaticon.com/512/900/900782.png' },
+  { id: '4', name: 'Printer Drivers', type: 'system', icon: 'https://cdn-icons-png.flaticon.com/512/3062/3062634.png' },
+  { id: '5', name: 'Google Chrome', type: 'application', icon: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Google_Chrome_icon_%28February_2022%29.svg' },
+  { id: '6', name: 'Microsoft Word', type: 'application', icon: 'https://upload.wikimedia.org/wikipedia/commons/f/fd/Microsoft_Office_Word_%282019%E2%80%93present%29.svg' },
+  { id: '7', name: 'Microsoft PowerPoint', type: 'application', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Microsoft_Office_PowerPoint_%282019%E2%80%93present%29.svg' },
+  { id: '8', name: 'Spotify Music', type: 'application', icon: 'https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg' },
+  { id: '9', name: 'Fortnite / Epic', type: 'application', icon: 'https://upload.wikimedia.org/wikipedia/commons/3/31/Epic_Games_logo.svg' },
+  { id: '10', name: 'Disk First Aid', type: 'utility', icon: 'https://cdn-icons-png.flaticon.com/512/2313/2313434.png' },
+  { id: '11', name: 'Antivirus Guard', type: 'utility', icon: 'https://cdn-icons-png.flaticon.com/512/9463/9463775.png' },
+  { id: '12', name: 'Time Machine Backup', type: 'utility', icon: 'https://cdn-icons-png.flaticon.com/512/2089/2089766.png' },
+  { id: '13', name: 'Disk Defragmenter', type: 'utility', icon: 'https://cdn-icons-png.flaticon.com/512/2885/2885417.png' },
+  { id: '14', name: 'Zip Compression', type: 'utility', icon: 'https://cdn-icons-png.flaticon.com/512/716/716053.png' }
 ];
 
+let activeCustomImageData = null;
+
 function loadData() {
-  const stored = localStorage.getItem('gcse_software_items');
+  const stored = localStorage.getItem('gcse_software_items_v2');
   return stored ? JSON.parse(stored) : defaultItems;
 }
 
 function saveData(data) {
-  localStorage.setItem('gcse_software_items', JSON.stringify(data));
+  localStorage.setItem('gcse_software_items_v2', JSON.stringify(data));
 }
 
 let itemsData = loadData();
@@ -276,7 +344,18 @@ function createCard(item) {
   el.draggable = true;
   el.dataset.type = item.type;
   el.ondragstart = drag;
-  el.innerHTML = `<span class="icon-img">${item.icon}</span> <span>${item.name}</span>`;
+  
+  const img = document.createElement('img');
+  img.className = 'item-icon-img';
+  img.src = item.icon;
+  img.alt = item.name;
+  img.onerror = () => { img.src = 'https://cdn-icons-png.flaticon.com/512/1160/1160358.png'; };
+  
+  const span = document.createElement('span');
+  span.textContent = item.name;
+
+  el.appendChild(img);
+  el.appendChild(span);
   return el;
 }
 
@@ -349,28 +428,75 @@ function resetBoard() {
   });
 }
 
+/* Modal and Direct Paste Handling */
 function openModal() {
+  activeCustomImageData = null;
   document.getElementById('modal').style.display = 'flex';
+  document.getElementById('paste-preview').style.display = 'none';
+  document.getElementById('paste-hint').style.display = 'block';
+  document.getElementById('custom-name').value = '';
   document.getElementById('custom-name').focus();
 }
 
 function closeModal() {
   document.getElementById('modal').style.display = 'none';
-  document.getElementById('custom-name').value = '';
+}
+
+// Paste event listener for images copied from Google Images / Desktop
+window.addEventListener('paste', (e) => {
+  if (document.getElementById('modal').style.display !== 'flex') return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        activeCustomImageData = evt.target.result;
+        showPreview(activeCustomImageData);
+      };
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+});
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    activeCustomImageData = evt.target.result;
+    showPreview(activeCustomImageData);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPreview(dataUrl) {
+  const preview = document.getElementById('paste-preview');
+  preview.src = dataUrl;
+  preview.style.display = 'block';
+  document.getElementById('paste-hint').innerHTML = '✅ <strong>Image ready!</strong> Click again or paste to change.';
 }
 
 function addCustomItem() {
   const name = document.getElementById('custom-name').value.trim();
-  const emoji = document.getElementById('custom-emoji').value.trim() || '📦';
   const type = document.getElementById('custom-category').value;
   
-  if (!name) return;
+  if (!name) {
+    alert('Please enter a software name.');
+    return;
+  }
+
+  // Fallback icon if no image was pasted
+  const icon = activeCustomImageData || 'https://cdn-icons-png.flaticon.com/512/1160/1160358.png';
 
   const newItem = {
     id: 'custom-' + Date.now(),
     name: name,
     type: type,
-    icon: emoji
+    icon: icon
   };
 
   itemsData.push(newItem);
