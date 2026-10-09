@@ -1,0 +1,387 @@
+cat << 'EOF' > ~/software_sorter.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>macOS Software Categorisation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #102619 0%, #00331D 50%, #1a1a16 100%);
+    overflow: hidden;
+    color: #fff;
+  }
+  header {
+    height: 40px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .menu-left { display: flex; gap: 16px; align-items: center; font-weight: 600; }
+  .apple-logo { font-size: 17px; }
+  .menu-right { display: flex; gap: 10px; }
+  .btn {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.15s;
+  }
+  .btn:hover { background: rgba(255, 255, 255, 0.32); }
+  .btn-check { background: #007a3d; border-color: #00a854; }
+  .btn-check:hover { background: #00994c; }
+  .btn-add { background: #e74011; border-color: #ff6438; }
+  .btn-add:hover { background: #ff5221; }
+
+  .zones-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+  .zone {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    transition: all 0.2s ease;
+  }
+  .zone.drag-over {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: #fcc978;
+    transform: scale(1.006);
+  }
+  .zone-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+  .zone-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .pill-sys { color: #5ce69a; }
+  .pill-app { color: #fcc978; }
+  .pill-util { color: #76c5ff; }
+  .zone-desc { font-size: 13px; color: rgba(255, 255, 255, 0.75); margin-top: 4px; }
+
+  .drop-area {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 10px;
+    overflow-y: auto;
+    min-height: 120px;
+  }
+
+  .item-card {
+    background: #ffffff;
+    color: #111;
+    padding: 8px 14px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: grab;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.15s, box-shadow 0.15s, outline 0.15s;
+    height: 44px;
+    border: 1px solid #d4ded9;
+  }
+  .item-card:active { cursor: grabbing; transform: scale(1.05); }
+  .item-card .icon-img { font-size: 20px; }
+  .item-card.correct { outline: 3px solid #28a745; background: #e8f5e9; }
+  .item-card.wrong { outline: 3px solid #dc3545; background: #ffebee; }
+
+  .dock-container {
+    padding: 10px 0 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .dock {
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 18px;
+    padding: 8px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-height: 60px;
+    max-width: 95vw;
+    overflow-x: auto;
+  }
+  .dock.drag-over {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: #fcc978;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-box {
+    background: #1f2a24;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 24px;
+    width: 380px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  }
+  .modal-box h3 { margin-bottom: 16px; font-size: 18px; color: #fff; }
+  .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; color: rgba(255,255,255,0.7); }
+  .form-group input, .form-group select {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+  }
+  .form-group select option { background: #1f2a24; color: #fff; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="menu-left">
+    <span class="apple-logo"></span>
+    <span>GCSE ICT: Software Categorisation</span>
+  </div>
+  <div class="menu-right">
+    <button class="btn btn-add" onclick="openModal()">+ Add Icon</button>
+    <button class="btn btn-check" onclick="checkAnswers()">✓ Check Answers</button>
+    <button class="btn" onclick="resetBoard()">↺ Reset All to Dock</button>
+  </div>
+</header>
+
+<div class="zones-container">
+  <div class="zone" data-category="system" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+    <div class="zone-header">
+      <div class="zone-title pill-sys">⚙ System Software</div>
+      <div class="zone-desc">Core purpose: <strong>Runs and controls the computer hardware</strong></div>
+    </div>
+    <div class="drop-area" id="zone-system"></div>
+  </div>
+
+  <div class="zone" data-category="application" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+    <div class="zone-header">
+      <div class="zone-title pill-app">📱 Application Software</div>
+      <div class="zone-desc">Core purpose: <strong>Does a specific job for the user</strong></div>
+    </div>
+    <div class="drop-area" id="zone-application"></div>
+  </div>
+
+  <div class="zone" data-category="utility" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+    <div class="zone-header">
+      <div class="zone-title pill-util">🛠 Utility Software</div>
+      <div class="zone-desc">Core purpose: <strong>Maintains, secures & optimizes the system</strong></div>
+    </div>
+    <div class="drop-area" id="zone-utility"></div>
+  </div>
+</div>
+
+<div class="dock-container">
+  <div class="dock" id="dock" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)" data-category="dock"></div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <h3>Add Custom Software Icon</h3>
+    <div class="form-group">
+      <label>Software Name:</label>
+      <input type="text" id="custom-name" placeholder="e.g. Roblox, Device Driver, Firewall">
+    </div>
+    <div class="form-group">
+      <label>Icon / Emoji:</label>
+      <input type="text" id="custom-emoji" value="💻" maxlength="4">
+    </div>
+    <div class="form-group">
+      <label>Correct Category:</label>
+      <select id="custom-category">
+        <option value="system">System Software</option>
+        <option value="application">Application Software</option>
+        <option value="utility">Utility Software</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-check" onclick="addCustomItem()">Add to Dock</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const defaultItems = [
+  { id: '1', name: 'macOS Finder', type: 'system', icon: '💻' },
+  { id: '2', name: 'System Settings', type: 'system', icon: '⚙️' },
+  { id: '3', name: 'Terminal (CLI)', type: 'system', icon: '⌨️' },
+  { id: '4', name: 'Printer Drivers', type: 'system', icon: '🖨️' },
+  { id: '5', name: 'Google Chrome', type: 'application', icon: '🌐' },
+  { id: '6', name: 'Microsoft Word', type: 'application', icon: '📝' },
+  { id: '7', name: 'Spotify Music', type: 'application', icon: '🎵' },
+  { id: '8', name: 'Fortnite', type: 'application', icon: '🎮' },
+  { id: '9', name: 'Photoshop', type: 'application', icon: '🎨' },
+  { id: '10', name: 'Disk First Aid', type: 'utility', icon: '💽' },
+  { id: '11', name: 'Antivirus Guard', type: 'utility', icon: '🛡️' },
+  { id: '12', name: 'Time Machine Backup', type: 'utility', icon: '⏳' },
+  { id: '13', name: 'Disk Defragmenter', type: 'utility', icon: '🧩' },
+  { id: '14', name: 'Zip Compression', type: 'utility', icon: '🗜️' }
+];
+
+function loadData() {
+  const stored = localStorage.getItem('gcse_software_items');
+  return stored ? JSON.parse(stored) : defaultItems;
+}
+
+function saveData(data) {
+  localStorage.setItem('gcse_software_items', JSON.stringify(data));
+}
+
+let itemsData = loadData();
+
+function createCard(item) {
+  const el = document.createElement('div');
+  el.className = 'item-card';
+  el.id = 'card-' + item.id;
+  el.draggable = true;
+  el.dataset.type = item.type;
+  el.ondragstart = drag;
+  el.innerHTML = `<span class="icon-img">${item.icon}</span> <span>${item.name}</span>`;
+  return el;
+}
+
+function init() {
+  const dock = document.getElementById('dock');
+  dock.innerHTML = '';
+  document.getElementById('zone-system').innerHTML = '';
+  document.getElementById('zone-application').innerHTML = '';
+  document.getElementById('zone-utility').innerHTML = '';
+  
+  itemsData.forEach(item => {
+    dock.appendChild(createCard(item));
+  });
+}
+
+function drag(ev) {
+  ev.dataTransfer.setData("text/plain", ev.currentTarget.id);
+  ev.currentTarget.classList.remove('correct', 'wrong');
+}
+
+function allowDrop(ev) {
+  ev.preventDefault();
+  const zone = ev.target.closest('.zone, .dock');
+  if (zone) zone.classList.add('drag-over');
+}
+
+function dragLeave(ev) {
+  const zone = ev.target.closest('.zone, .dock');
+  if (zone) zone.classList.remove('drag-over');
+}
+
+function drop(ev) {
+  ev.preventDefault();
+  const zone = ev.target.closest('.zone, .dock');
+  if (zone) zone.classList.remove('drag-over');
+  
+  const id = ev.dataTransfer.getData("text/plain");
+  const card = document.getElementById(id);
+  if (!card) return;
+
+  if (zone.classList.contains('dock')) {
+    zone.appendChild(card);
+  } else {
+    const dropArea = zone.querySelector('.drop-area');
+    if (dropArea) dropArea.appendChild(card);
+  }
+}
+
+function checkAnswers() {
+  document.querySelectorAll('.zone').forEach(zone => {
+    const category = zone.dataset.category;
+    const cards = zone.querySelectorAll('.item-card');
+    cards.forEach(card => {
+      card.classList.remove('correct', 'wrong');
+      if (card.dataset.type === category) {
+        card.classList.add('correct');
+      } else {
+        card.classList.add('wrong');
+      }
+    });
+  });
+}
+
+function resetBoard() {
+  const dock = document.getElementById('dock');
+  const allCards = document.querySelectorAll('.item-card');
+  allCards.forEach(card => {
+    card.classList.remove('correct', 'wrong');
+    dock.appendChild(card);
+  });
+}
+
+function openModal() {
+  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('custom-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('custom-name').value = '';
+}
+
+function addCustomItem() {
+  const name = document.getElementById('custom-name').value.trim();
+  const emoji = document.getElementById('custom-emoji').value.trim() || '📦';
+  const type = document.getElementById('custom-category').value;
+  
+  if (!name) return;
+
+  const newItem = {
+    id: 'custom-' + Date.now(),
+    name: name,
+    type: type,
+    icon: emoji
+  };
+
+  itemsData.push(newItem);
+  saveData(itemsData);
+  document.getElementById('dock').appendChild(createCard(newItem));
+  closeModal();
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
+EOF
