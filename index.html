@@ -54,6 +54,8 @@
   .btn-check:hover { background: #009944; }
   .btn-add { background: #e04816; border-color: #ff6b3d; }
   .btn-add:hover { background: #ff5722; }
+  .btn-danger { background: rgba(220, 53, 69, 0.3); border-color: rgba(220, 53, 69, 0.6); }
+  .btn-danger:hover { background: #dc3545; }
 
   /* 3 Classification Zones */
   .zones-container {
@@ -104,15 +106,15 @@
     padding-right: 4px;
   }
 
-  /* Draggable Item Card */
+  /* Draggable Item Card with Edit Controls */
   .item-card {
     background: #ffffff;
     color: #111827;
-    padding: 6px 12px 6px 8px;
+    padding: 6px 10px 6px 8px;
     border-radius: 10px;
     display: inline-flex;
     align-items: center;
-    gap: 9px;
+    gap: 8px;
     font-size: 13px;
     font-weight: 700;
     cursor: grab;
@@ -120,6 +122,7 @@
     transition: transform 0.15s, box-shadow 0.15s, outline 0.15s, background 0.15s;
     height: 48px;
     border: 1px solid rgba(0, 0, 0, 0.1);
+    position: relative;
   }
   .item-card:active { cursor: grabbing; transform: scale(1.04); }
   .item-icon-img {
@@ -130,6 +133,40 @@
     display: block;
     flex-shrink: 0;
   }
+  .item-name-text {
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Quick action buttons on hover */
+  .card-actions {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    margin-left: 4px;
+  }
+  .item-card:hover .card-actions {
+    display: inline-flex;
+  }
+  .card-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: none;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .card-btn:hover { background: #cbd5e1; color: #0f172a; }
+  .card-btn.del-btn:hover { background: #fee2e2; color: #ef4444; }
+
   .item-card.correct {
     outline: 3px solid #28a745;
     background: #e8f5e9;
@@ -168,7 +205,7 @@
     border-color: #fcc978;
   }
 
-  /* Modal for Adding Custom Icons */
+  /* Modal for Adding / Editing Custom Icons */
   .modal-overlay {
     display: none;
     position: fixed;
@@ -227,7 +264,8 @@
     margin-bottom: 6px;
   }
   .paste-hint { font-size: 11.5px; color: #fcc978; line-height: 1.4; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+  .modal-right-actions { display: flex; gap: 10px; }
 </style>
 </head>
 <body>
@@ -240,7 +278,8 @@
   <div class="menu-right">
     <button class="btn btn-add" onclick="openModal()">+ Add Icon</button>
     <button class="btn btn-check" onclick="checkAnswers()">✓ Check Answers</button>
-    <button class="btn" onclick="resetBoard()">↺ Reset All to Dock</button>
+    <button class="btn" onclick="resetBoard()">↺ Reset to Dock</button>
+    <button class="btn btn-danger" onclick="confirmResetDefaults()" title="Reset all icons to standard default list">Reset Defaults</button>
   </div>
 </header>
 
@@ -274,10 +313,11 @@
   <div class="dock" id="dock" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)" data-category="dock"></div>
 </div>
 
-<!-- Add Icon Modal with Clipboard & File Paste -->
+<!-- Add / Edit Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal-box">
-    <h3>Add Custom Software Icon</h3>
+    <h3 id="modal-title">Add Custom Software Icon</h3>
+    <input type="hidden" id="edit-item-id" value="">
     <div class="form-group">
       <label>Software Name:</label>
       <input type="text" id="custom-name" placeholder="e.g. Microsoft PowerPoint, Teams, Roblox">
@@ -299,14 +339,16 @@
       </select>
     </div>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-check" onclick="addCustomItem()">Add to Dock</button>
+      <button class="btn btn-danger" id="modal-delete-btn" style="display: none;" onclick="deleteCurrentItem()">Delete Icon</button>
+      <div class="modal-right-actions">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-check" id="modal-save-btn" onclick="saveItem()">Add to Dock</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// High-resolution SVG / WebP icons for authentic application recognition
 const defaultItems = [
   { id: '1', name: 'macOS Finder', type: 'system', icon: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Finder_Icon_macOS_Big_Sur.png' },
   { id: '2', name: 'System Settings', type: 'system', icon: 'https://upload.wikimedia.org/wikipedia/commons/6/67/System_Settings_macOS_Ventura.png' },
@@ -327,12 +369,12 @@ const defaultItems = [
 let activeCustomImageData = null;
 
 function loadData() {
-  const stored = localStorage.getItem('gcse_software_items_v2');
+  const stored = localStorage.getItem('gcse_software_items_v3');
   return stored ? JSON.parse(stored) : defaultItems;
 }
 
 function saveData(data) {
-  localStorage.setItem('gcse_software_items_v2', JSON.stringify(data));
+  localStorage.setItem('gcse_software_items_v3', JSON.stringify(data));
 }
 
 let itemsData = loadData();
@@ -343,19 +385,48 @@ function createCard(item) {
   el.id = 'card-' + item.id;
   el.draggable = true;
   el.dataset.type = item.type;
+  el.dataset.id = item.id;
   el.ondragstart = drag;
-  
+  el.ondblclick = () => openEditModal(item.id);
+
   const img = document.createElement('img');
   img.className = 'item-icon-img';
   img.src = item.icon;
   img.alt = item.name;
   img.onerror = () => { img.src = 'https://cdn-icons-png.flaticon.com/512/1160/1160358.png'; };
-  
+
   const span = document.createElement('span');
+  span.className = 'item-name-text';
   span.textContent = item.name;
+  span.title = item.name;
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'card-btn';
+  editBtn.innerHTML = '✎';
+  editBtn.title = 'Edit software';
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
+    openEditModal(item.id);
+  };
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'card-btn del-btn';
+  delBtn.innerHTML = '✕';
+  delBtn.title = 'Delete software';
+  delBtn.onclick = (e) => {
+    e.stopPropagation();
+    deleteItem(item.id);
+  };
+
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
 
   el.appendChild(img);
   el.appendChild(span);
+  el.appendChild(actions);
   return el;
 }
 
@@ -365,7 +436,7 @@ function init() {
   document.getElementById('zone-system').innerHTML = '';
   document.getElementById('zone-application').innerHTML = '';
   document.getElementById('zone-utility').innerHTML = '';
-  
+
   itemsData.forEach(item => {
     dock.appendChild(createCard(item));
   });
@@ -391,7 +462,7 @@ function drop(ev) {
   ev.preventDefault();
   const zone = ev.target.closest('.zone, .dock');
   if (zone) zone.classList.remove('drag-over');
-  
+
   const id = ev.dataTransfer.getData("text/plain");
   const card = document.getElementById(id);
   if (!card) return;
@@ -428,13 +499,45 @@ function resetBoard() {
   });
 }
 
-/* Modal and Direct Paste Handling */
+function confirmResetDefaults() {
+  if (confirm("Reset all software items to the default list? Any custom items or edits will be cleared.")) {
+    itemsData = [...defaultItems];
+    saveData(itemsData);
+    init();
+  }
+}
+
+/* Modal Handling (Add / Edit) */
 function openModal() {
   activeCustomImageData = null;
-  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('edit-item-id').value = '';
+  document.getElementById('modal-title').textContent = 'Add Custom Software Icon';
+  document.getElementById('modal-save-btn').textContent = 'Add to Dock';
+  document.getElementById('modal-delete-btn').style.display = 'none';
   document.getElementById('paste-preview').style.display = 'none';
   document.getElementById('paste-hint').style.display = 'block';
+  document.getElementById('paste-hint').innerHTML = '📋 <strong>Click &amp; Paste (Cmd+V)</strong> any image here<br>or click to upload a file';
   document.getElementById('custom-name').value = '';
+  document.getElementById('custom-category').value = 'application';
+  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('custom-name').focus();
+}
+
+function openEditModal(itemId) {
+  const item = itemsData.find(i => String(i.id) === String(itemId));
+  if (!item) return;
+
+  activeCustomImageData = item.icon;
+  document.getElementById('edit-item-id').value = item.id;
+  document.getElementById('modal-title').textContent = 'Edit Software Item';
+  document.getElementById('modal-save-btn').textContent = 'Save Changes';
+  document.getElementById('modal-delete-btn').style.display = 'inline-flex';
+
+  document.getElementById('custom-name').value = item.name;
+  document.getElementById('custom-category').value = item.type;
+
+  showPreview(item.icon);
+  document.getElementById('modal').style.display = 'flex';
   document.getElementById('custom-name').focus();
 }
 
@@ -442,12 +545,31 @@ function closeModal() {
   document.getElementById('modal').style.display = 'none';
 }
 
-// Paste event listener for images copied from Google Images / Desktop
+function deleteItem(itemId) {
+  const item = itemsData.find(i => String(i.id) === String(itemId));
+  const itemName = item ? item.name : 'this item';
+  if (confirm(`Delete "${itemName}"?`)) {
+    itemsData = itemsData.filter(i => String(i.id) !== String(itemId));
+    saveData(itemsData);
+    const card = document.getElementById('card-' + itemId);
+    if (card) card.remove();
+  }
+}
+
+function deleteCurrentItem() {
+  const editId = document.getElementById('edit-item-id').value;
+  if (editId) {
+    deleteItem(editId);
+    closeModal();
+  }
+}
+
+// Paste event listener for images
 window.addEventListener('paste', (e) => {
   if (document.getElementById('modal').style.display !== 'flex') return;
   const items = e.clipboardData && e.clipboardData.items;
   if (!items) return;
-  
+
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf('image') !== -1) {
       const blob = items[i].getAsFile();
@@ -477,31 +599,57 @@ function showPreview(dataUrl) {
   const preview = document.getElementById('paste-preview');
   preview.src = dataUrl;
   preview.style.display = 'block';
-  document.getElementById('paste-hint').innerHTML = '✅ <strong>Image ready!</strong> Click again or paste to change.';
+  document.getElementById('paste-hint').innerHTML = '✅ <strong>Image set!</strong> Click or paste again to change.';
 }
 
-function addCustomItem() {
+function saveItem() {
   const name = document.getElementById('custom-name').value.trim();
   const type = document.getElementById('custom-category').value;
-  
+  const editId = document.getElementById('edit-item-id').value;
+
   if (!name) {
     alert('Please enter a software name.');
     return;
   }
 
-  // Fallback icon if no image was pasted
   const icon = activeCustomImageData || 'https://cdn-icons-png.flaticon.com/512/1160/1160358.png';
 
-  const newItem = {
-    id: 'custom-' + Date.now(),
-    name: name,
-    type: type,
-    icon: icon
-  };
+  if (editId) {
+    // Edit existing item
+    const index = itemsData.findIndex(i => String(i.id) === String(editId));
+    if (index !== -1) {
+      itemsData[index].name = name;
+      itemsData[index].type = type;
+      itemsData[index].icon = icon;
+      saveData(itemsData);
 
-  itemsData.push(newItem);
-  saveData(itemsData);
-  document.getElementById('dock').appendChild(createCard(newItem));
+      // Update existing DOM card in-place (keeps its position in dock or zone)
+      const card = document.getElementById('card-' + editId);
+      if (card) {
+        card.dataset.type = type;
+        const img = card.querySelector('.item-icon-img');
+        const span = card.querySelector('.item-name-text');
+        if (img) img.src = icon;
+        if (span) {
+          span.textContent = name;
+          span.title = name;
+        }
+        card.classList.remove('correct', 'wrong');
+      }
+    }
+  } else {
+    // Add new item
+    const newItem = {
+      id: 'custom-' + Date.now(),
+      name: name,
+      type: type,
+      icon: icon
+    };
+    itemsData.push(newItem);
+    saveData(itemsData);
+    document.getElementById('dock').appendChild(createCard(newItem));
+  }
+
   closeModal();
 }
 
